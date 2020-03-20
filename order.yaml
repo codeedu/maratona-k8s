@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-conf
+  labels:
+    name: order-conf
+data:
+  env: |
+    APP_PORT=3000
+    MICRO_DRIVERS_URL=http://192.168.99.111:32125
+    MICRO_MAPPING_URL=http://map.project.maratona.fullcycle.com.br
+    RABBITMQ_HOST=rabbitmq-service
+    RABBITMQ_USER=admin
+    RABBITMQ_PASSWORD=admin
+    MYSQL_HOST=order-mysql-service
+    MYSQL_USER=root
+    MYSQL_PASSWORD=root
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order
+spec:
+  selector:
+    matchLabels:
+      app: order
+
+  template:
+    metadata:
+      labels:
+        app: order
+    spec:
+      containers:
+        - name: order
+          image: wesleywillians/maratona-orders
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: order-conf
+          volumeMounts:
+          - name: order-conf
+            subPath: .env
+            mountPath: /home/node/app/.env
+
+      volumes:
+      - name: order-conf
+        configMap:
+          name: order-conf
+          items:
+            - key: env
+              path: .env
+          
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  labels:
+    app: order-service
+spec:
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 3000
+  selector:
+    app: order

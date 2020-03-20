@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: map-conf
+  labels:
+    name: map-conf
+data:
+  env: |
+    APP_ENV=prod
+    APP_PORT=3000
+    RABBITMQ_HOST=rabbitmq-service
+    RABBITMQ_USER=admin
+    RABBITMQ_PASSWORD=admin
+    MYSQL_HOST=map-mysql-service
+    MYSQL_USER=root
+    MYSQL_PASSWORD=root
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: map
+spec:
+  selector:
+    matchLabels:
+      app: map
+
+  template:
+    metadata:
+      labels:
+        app: map
+    spec:
+      containers:
+        - name: map
+          image: wesleywillians/maratona-map
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: map-conf
+          volumeMounts:
+          - name: map-conf
+            subPath: .env
+            mountPath: /home/node/app/.env
+
+      volumes:
+      - name: map-conf
+        configMap:
+          name: map-conf
+          items:
+            - key: env
+              path: .env
+          
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: map-service
+  labels:
+    app: map-service
+spec:
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 3000
+  selector:
+    app: map
